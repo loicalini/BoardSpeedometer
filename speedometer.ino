@@ -8,11 +8,13 @@ double deltaT;
 double topSpeed;
 float recordSpeed;
 int loopCount;
+
 void setup() {
   
-  // put your setup code here, to run once:     
-  //pinMode(hallSensorPin, INPUT);   
-  Serial.begin(9600);
+     
+  pinMode(2, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(2), magnet_detect, FALLING);
+
   lcd.init();
   // Print a message to the LCD.
   lcd.backlight();
@@ -22,50 +24,62 @@ void setup() {
   lcd.print("Ride Safe! :P");
   delay(3000);
   lcd.clear();  
-  attachInterrupt(0, magnet_detect, FALLING);//Initialize the intterrupt pin (Arduino digital pin 2)
-  //EEPROM.get(0,recordSpeed); disabled for now, reenable when code is finalized
-  recordSpeed = 18.6;
+
+  lcd.setCursor(8,0);
+  lcd.print(" MPH");
+  lcd.setCursor(11,1);
+  lcd.print(" MPH");
+  EEPROM.get(0,recordSpeed); //disabled for now, reenable when code is finalized
   
 }
 
 void loop() {
-  lcd.setCursor(4,0);
-  lcd.print(deltaT);
-  lcd.setCursor(8,0);
-  lcd.print(" MPH");
-  
-  loopCount = loopCount + 1;
-  
-  if (loopCount >= 130){
+
+  //Update whether top speed or record speed is showing at the moment
+  if (loopCount == 0) {
+    lcd.setCursor(1,1);
+    lcd.print("TOP = ");
+  }
+
+  if (loopCount == 130){
     lcd.setCursor(1,1);
     lcd.print("REC = ");
+  }
+
+
+
+  
+  lcd.setCursor(4,0);
+  lcd.print(deltaT);
+  
+  
+  loopCount = loopCount + 1; 
+  if (loopCount >= 130){
     lcd.setCursor(7,1);
     lcd.print(recordSpeed);
     lcd.setCursor(11,1);
-    lcd.print(" MPH");
-    if (loopCount == 150){
-      loopCount = 0;
-    }
+  lcd.print(" ");
+    loopCount = loopCount*(loopCount != 150);
   }
+  
   else {
-    lcd.setCursor(1,1);
-    lcd.print("TOP = ");
     lcd.setCursor(7,1);
     lcd.print(topSpeed);
     lcd.setCursor(11,1);
-    lcd.print(" MPH");
-  }
+    lcd.print(" ");
+    }
 
-  if (((double) (micros()-t1) / 1000000) > 3.0){
+  if (((double) (micros()-t1) / 1000000) > 3.0){ // if wheel doesnt spin for 3 seconds, speed set to 0.
     deltaT = 0.00;
   }
-  delay(100); //delay function is in milliseconds, 1000 milliseconds in one second
+  delay(100); //delay function is in milliseconds
 
   
 }
 
  void magnet_detect()//This function is called whenever a magnet/interrupt is detected by the arduino
  {
+  
    deltaT = (double) (micros() - t1) / 1000000;
    t1 = micros();
 
@@ -74,6 +88,8 @@ void loop() {
    if (topSpeed < deltaT){
     topSpeed = deltaT;
    }
+
+   
 
    if (recordSpeed < topSpeed){
     recordSpeed = (float) topSpeed;
